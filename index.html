@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Intervalo · ROOF</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --amber: #c9933a;
+    --amber-dim: #8a6426;
+    --text: #e8e0d0;
+    --muted: #6a6258;
+    --white: #f5f0e8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.6;
+  }
+
+  /* SCREEN FLASH */
+  #flash-overlay {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    padding: 28px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+  .tagline {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* TIMER SECTION */
+  .timer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px 24px;
+    width: 100%;
+  }
+
+  .timer-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .timer-display {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(72px, 22vw, 110px);
+    color: var(--white);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+  .timer-display.urgent { color: var(--amber); }
+
+  .timer-ring {
+    width: 180px;
+    height: 180px;
+    margin: 16px 0;
+    position: relative;
+  }
+  .timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 2; }
+  .ring-progress {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 502;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear, stroke 0.5s;
+  }
+  .ring-progress.urgent { stroke: #e06030; }
+
+  .timer-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .timer-big { font-family: 'DM Serif Display', serif; font-size: 38px; color: var(--white); line-height: 1; }
+  .timer-sub { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+
+  .timer-controls {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.primary {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #0e0e0e;
+    font-weight: 400;
+  }
+  .btn.primary:hover { background: #d9a34a; }
+
+  /* DIVIDER */
+  .divider {
+    width: calc(100% - 48px);
+    height: 1px;
+    background: var(--border);
+    margin: 0 24px;
+  }
+
+  /* EXERCISES */
+  .exercises-section {
+    width: 100%;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .exercise-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+  }
+  .exercise-card:active { transform: scale(0.985); }
+  .exercise-card:hover { border-color: var(--amber-dim); }
+  .exercise-card.active { border-color: var(--amber); }
+  .exercise-card.done { border-color: #2a3a2a; opacity: 0.7; }
+
+  /* Silhouette icon area */
+  .ex-icon {
+    width: 90px;
+    min-width: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: #111;
+  }
+
+  .silhouette-container {
+    position: relative;
+    width: 64px;
+    height: 80px;
+  }
+
+  .silhouette-svg {
+    width: 64px;
+    height: 80px;
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 2;
+  }
+
+  /* fill bar that reveals from bottom */
+  .fill-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 64px;
+    height: 0%;
+    background: var(--bg);
+    z-index: 3;
+    transition: none;
+  }
+
+  .ex-content {
+    padding: 14px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .ex-step {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+  .ex-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: var(--white);
+    line-height: 1.2;
+  }
+  .ex-desc {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  .ex-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .ex-duration {
+    font-size: 11px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+  .ex-progress-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .ex-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--amber);
+    border-radius: 1px;
+    transition: width 0.1s linear;
+  }
+  .ex-card.done .ex-progress-fill { background: #4a8a4a; width: 100%; }
+
+  .tap-hint {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-align: center;
+    padding: 8px;
+    text-transform: uppercase;
+  }
+
+  /* STATUS BUBBLE */
+  .status-bubble {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--amber);
+    color: #0e0e0e;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border-radius: 40px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .status-bubble.visible { transform: translateX(-50%) translateY(0); }
+
+</style>
+</head>
+<body>
+
+<div id="flash-overlay"></div>
+
+<header>
+  <span class="logo">Intervalo</span>
+  <span class="tagline">corpo em forma</span>
+</header>
+
+<div class="timer-section">
+  <div class="timer-label">próximo intervalo em</div>
+
+  <div class="timer-ring">
+    <svg viewBox="0 0 170 170">
+      <circle class="ring-bg" cx="85" cy="85" r="80"/>
+      <circle class="ring-progress" id="ringProgress" cx="85" cy="85" r="80"/>
+    </svg>
+    <div class="timer-inner">
+      <div class="timer-big" id="timerBig">45:00</div>
+      <div class="timer-sub" id="timerSub">minutos</div>
+    </div>
+  </div>
+
+  <div class="timer-controls">
+    <button class="btn" id="resetBtn" onclick="resetTimer()">Reiniciar</button>
+    <button class="btn primary" id="startBtn" onclick="toggleTimer()">Iniciar</button>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="exercises-section">
+  <div class="section-title">Exercícios do intervalo</div>
+
+  <!-- Exercise 1: Wall Angels -->
+  <div class="exercise-card" id="card-0" onclick="startExercise(0)">
+    <div class="ex-icon">
+      <div class="silhouette-container">
+        <!-- Wall Angel silhouette: standing, arms raised in W shape -->
+        <svg class="silhouette-svg" viewBox="0 0 64 80" fill="none">
+          <g fill="var(--amber)" opacity="0.9">
+            <!-- head -->
+            <ellipse cx="32" cy="7" rx="5.5" ry="6"/>
+            <!-- torso -->
+            <rect x="26" y="14" width="12" height="20" rx="3"/>
+            <!-- left arm raised in W -->
+            <path d="M26 16 Q18 10 14 6 Q12 4 13 8 Q15 14 18 18 Q22 22 26 24" stroke="var(--amber)" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <!-- right arm raised in W -->
+            <path d="M38 16 Q46 10 50 6 Q52 4 51 8 Q49 14 46 18 Q42 22 38 24" stroke="var(--amber)" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <!-- hips -->
+            <rect x="25" y="33" width="14" height="8" rx="2"/>
+            <!-- left leg -->
+            <rect x="25" y="40" width="6" height="24" rx="3"/>
+            <!-- right leg -->
+            <rect x="33" y="40" width="6" height="24" rx="3"/>
+            <!-- feet -->
+            <rect x="23" y="62" width="9" height="4" rx="2"/>
+            <rect x="32" y="62" width="9" height="4" rx="2"/>
+          </g>
+        </svg>
+        <div class="fill-bar" id="fill-0"></div>
+      </div>
+    </div>
+    <div class="ex-content">
+      <div class="ex-step">Passo 01 · Postura</div>
+      <div class="ex-name">Wall Angels</div>
+      <div class="ex-desc">10 repetições — abre o peito,<br>alinha os ombros</div>
+      <div class="ex-meta">
+        <span class="ex-duration" id="dur-0">~60 seg</span>
+        <div class="ex-progress-bar"><div class="ex-progress-fill" id="prog-0"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise 2: Hip Flexor Stretch -->
+  <div class="exercise-card" id="card-1" onclick="startExercise(1)">
+    <div class="ex-icon">
+      <div class="silhouette-container">
+        <!-- Lunge stretch silhouette -->
+        <svg class="silhouette-svg" viewBox="0 0 64 80" fill="none">
+          <g fill="var(--amber)" opacity="0.9">
+            <!-- head -->
+            <ellipse cx="32" cy="6" rx="5.5" ry="6"/>
+            <!-- torso upright -->
+            <rect x="27" y="13" width="10" height="18" rx="3"/>
+            <!-- right arm down -->
+            <path d="M37 18 Q44 22 46 30" stroke="var(--amber)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <!-- left arm up (balance) -->
+            <path d="M27 18 Q20 14 16 10" stroke="var(--amber)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <!-- hips -->
+            <ellipse cx="32" cy="33" rx="8" ry="5"/>
+            <!-- front leg (bent at knee, lunge) -->
+            <path d="M34 37 Q38 50 36 62" stroke="var(--amber)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <!-- back leg (extended back, knee on ground) -->
+            <path d="M29 36 Q18 42 14 54 Q13 58 18 58" stroke="var(--amber)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <!-- front foot -->
+            <ellipse cx="36" cy="64" rx="6" ry="3"/>
+            <!-- back knee -->
+            <ellipse cx="18" cy="58" rx="4" ry="3"/>
+          </g>
+        </svg>
+        <div class="fill-bar" id="fill-1"></div>
+      </div>
+    </div>
+    <div class="ex-content">
+      <div class="ex-step">Passo 02 · Lombar</div>
+      <div class="ex-name">Flexor do Quadril</div>
+      <div class="ex-desc">30 seg cada perna — destravar<br>a lombar e o psoas</div>
+      <div class="ex-meta">
+        <span class="ex-duration" id="dur-1">60 seg</span>
+        <div class="ex-progress-bar"><div class="ex-progress-fill" id="prog-1"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise 3: Squats -->
+  <div class="exercise-card" id="card-2" onclick="startExercise(2)">
+    <div class="ex-icon">
+      <div class="silhouette-container">
+        <!-- Squat silhouette: deep squat position -->
+        <svg class="silhouette-svg" viewBox="0 0 64 80" fill="none">
+          <g fill="var(--amber)" opacity="0.9">
+            <!-- head -->
+            <ellipse cx="32" cy="7" rx="5.5" ry="6"/>
+            <!-- torso leaning forward in squat -->
+            <path d="M28 13 Q26 28 27 36 Q32 40 37 36 Q38 28 36 13 Z" fill="var(--amber)"/>
+            <!-- arms extended forward for balance -->
+            <path d="M28 22 Q18 20 10 18" stroke="var(--amber)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <path d="M36 22 Q46 20 54 18" stroke="var(--amber)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <!-- hips wide in squat -->
+            <ellipse cx="32" cy="38" rx="10" ry="6"/>
+            <!-- thighs going out and down (squat position) -->
+            <path d="M24 40 Q14 50 16 62" stroke="var(--amber)" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+            <path d="M40 40 Q50 50 48 62" stroke="var(--amber)" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+            <!-- feet flat -->
+            <ellipse cx="16" cy="64" rx="6" ry="3.5"/>
+            <ellipse cx="48" cy="64" rx="6" ry="3.5"/>
+          </g>
+        </svg>
+        <div class="fill-bar" id="fill-2"></div>
+      </div>
+    </div>
+    <div class="ex-content">
+      <div class="ex-step">Passo 03 · Metabolismo</div>
+      <div class="ex-name">Squats</div>
+      <div class="ex-desc">20 repetições — bomba o sangue,<br>ativa as pernas</div>
+      <div class="ex-meta">
+        <span class="ex-duration" id="dur-2">40 seg</span>
+        <div class="ex-progress-bar"><div class="ex-progress-fill" id="prog-2"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tap-hint">toque na pose para iniciar o exercício</div>
+</div>
+
+<div class="status-bubble" id="statusBubble">Intervalo! Hora de se mover.</div>
+
+<script>
+// ─── TIMER ───────────────────────────────────────────────────────────
+const TOTAL = 45 * 60; // 45 minutes in seconds
+let remaining = TOTAL;
+let running = false;
+let timerInterval = null;
+
+const circumference = 2 * Math.PI * 80; // 502.65...
+const ringProgress = document.getElementById('ringProgress');
+ringProgress.style.strokeDasharray = circumference;
+
+function updateDisplay() {
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  const txt = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('timerBig').textContent = txt;
+
+  const pct = remaining / TOTAL;
+  const offset = circumference * (1 - pct);
+  ringProgress.style.strokeDashoffset = offset;
+
+  // urgent when < 5 min
+  if (remaining <= 300) {
+    ringProgress.classList.add('urgent');
+  } else {
+    ringProgress.classList.remove('urgent');
+  }
+}
+
+function toggleTimer() {
+  if (running) {
+    clearInterval(timerInterval);
+    running = false;
+    document.getElementById('startBtn').textContent = 'Iniciar';
+  } else {
+    running = true;
+    document.getElementById('startBtn').textContent = 'Pausar';
+    timerInterval = setInterval(() => {
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        running = false;
+        document.getElementById('startBtn').textContent = 'Iniciar';
+        triggerAlert();
+        return;
+      }
+      remaining--;
+      updateDisplay();
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  running = false;
+  remaining = TOTAL;
+  document.getElementById('startBtn').textContent = 'Iniciar';
+  updateDisplay();
+}
+
+// ─── SCREEN FLASH ────────────────────────────────────────────────────
+function triggerAlert() {
+  showBubble('Intervalo! Hora de se mover.');
+  // Attempt to wake screen via NoSleep-style trick
+  const vid = document.createElement('video');
+  vid.setAttribute('playsinline', '');
+  vid.setAttribute('muted', '');
+  vid.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28ybXA0MQAAAAhmcmVlAAAA';
+  document.body.appendChild(vid);
+  vid.play().catch(()=>{});
+
+  // Flash 3 times
+  let count = 0;
+  const flash = document.getElementById('flash-overlay');
+  function doFlash() {
+    if (count >= 3) {
+      flash.style.opacity = '0';
+      document.body.removeChild(vid);
+      return;
+    }
+    flash.style.opacity = '1';
+    setTimeout(() => {
+      flash.style.opacity = '0';
+      setTimeout(() => {
+        count++;
+        doFlash();
+      }, 250);
+    }, 300);
+  }
+  doFlash();
+}
+
+// ─── EXERCISES ───────────────────────────────────────────────────────
+// durations in seconds
+const exercises = [
+  { total: 60, label: '~60 seg', reps: 10 },   // Wall Angels: 10 reps ~6s each
+  { total: 60, label: '60 seg', reps: 2 },      // Hip Flexor: 30s × 2 legs
+  { total: 40, label: '40 seg', reps: 20 },     // Squats: 20 reps ~2s each
+];
+
+let activeEx = null;
+let exInterval = null;
+let exElapsed = 0;
+
+function startExercise(idx) {
+  // If already running this one, cancel
+  if (activeEx === idx) {
+    clearInterval(exInterval);
+    activeEx = null;
+    resetExCard(idx);
+    return;
+  }
+
+  // Cancel any previous
+  if (activeEx !== null) {
+    clearInterval(exInterval);
+    resetExCard(activeEx);
+  }
+
+  activeEx = idx;
+  exElapsed = 0;
+  const ex = exercises[idx];
+  const card = document.getElementById(`card-${idx}`);
+  card.classList.add('active');
+
+  const fill = document.getElementById(`fill-${idx}`);
+  const prog = document.getElementById(`prog-${idx}`);
+  const dur  = document.getElementById(`dur-${idx}`);
+
+  // fill bar starts at 0%, grows to 100% over ex.total seconds
+  fill.style.transition = 'none';
+  fill.style.height = '0%';
+
+  exInterval = setInterval(() => {
+    exElapsed++;
+    const pct = (exElapsed / ex.total) * 100;
+    const remaining_ex = ex.total - exElapsed;
+    const m = Math.floor(remaining_ex / 60);
+    const s = remaining_ex % 60;
+    dur.textContent = m > 0 ? `${m}:${String(s).padStart(2,'0')}` : `${s} seg`;
+
+    // Fill bar goes from bottom up → covers the silhouette from bottom
+    fill.style.transition = 'height 0.9s linear';
+    fill.style.height = pct + '%';
+    prog.style.width = pct + '%';
+
+    if (exElapsed >= ex.total) {
+      clearInterval(exInterval);
+      activeEx = null;
+      card.classList.remove('active');
+      card.classList.add('done');
+      fill.style.height = '100%';
+      prog.style.width = '100%';
+      dur.textContent = '✓ feito';
+      showBubble(idx < 2 ? 'Próximo exercício!' : 'Sessão completa! 💪');
+    }
+  }, 1000);
+}
+
+function resetExCard(idx) {
+  const ex = exercises[idx];
+  const card = document.getElementById(`card-${idx}`);
+  card.classList.remove('active', 'done');
+  document.getElementById(`fill-${idx}`).style.height = '0%';
+  document.getElementById(`prog-${idx}`).style.width = '0%';
+  document.getElementById(`dur-${idx}`).textContent = ex.label;
+}
+
+// ─── STATUS BUBBLE ───────────────────────────────────────────────────
+let bubbleTimeout = null;
+function showBubble(msg) {
+  const b = document.getElementById('statusBubble');
+  b.textContent = msg;
+  b.classList.add('visible');
+  clearTimeout(bubbleTimeout);
+  bubbleTimeout = setTimeout(() => b.classList.remove('visible'), 3000);
+}
+
+// init
+updateDisplay();
+</script>
+</body>
+</html>
