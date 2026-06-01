@@ -58,8 +58,17 @@
     transition: opacity 2s ease;
   }
   #dim-overlay.active {
-    opacity: 0.92;
+    opacity: 1;
     pointer-events: auto;
+  }
+
+  /* timer section peeks through overlay when dimmed */
+  .timer-section.dimmed-peek {
+    position: relative;
+    z-index: 999;
+    opacity: 0.15;
+    transition: opacity 2s ease;
+    pointer-events: none;
   }
 
 
@@ -699,11 +708,13 @@ let dimTimer = null;
 function dimScreen() {
   isDimmed = true;
   dimOverlay.classList.add('active');
+  document.querySelector('.timer-section').classList.add('dimmed-peek');
 }
 
 function wakeScreen() {
   isDimmed = false;
   dimOverlay.classList.remove('active');
+  document.querySelector('.timer-section').classList.remove('dimmed-peek');
   resetDimTimer();
 }
 
