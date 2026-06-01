@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Intervalo">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Intervalo · ROOF</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap');
@@ -43,7 +47,22 @@
     opacity: 0.6;
   }
 
-  /* SCREEN FLASH */
+  /* DIM OVERLAY */
+  #dim-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 998;
+    transition: opacity 2s ease;
+  }
+  #dim-overlay.active {
+    opacity: 0.92;
+    pointer-events: auto;
+  }
+
+
   #flash-overlay {
     position: fixed;
     inset: 0;
@@ -123,6 +142,11 @@
     transition: stroke-dashoffset 1s linear, stroke 0.5s;
   }
   .ring-progress.urgent { stroke: #e06030; }
+
+  /* alert flip when 45min hits */
+  .timer-ring.alert-flip { background: var(--amber); border-radius: 50%; }
+  .timer-ring.alert-flip .timer-big { color: #0e0e0e; transition: color 0.3s; }
+  .timer-ring.alert-flip .timer-sub { color: #0e0e0e; opacity: 0.6; }
 
   .timer-inner {
     position: absolute;
@@ -263,8 +287,8 @@
   }
   .ex-name {
     font-family: 'DM Serif Display', serif;
-    font-size: 16px;
-    color: var(--white);
+    font-size: 20px;
+    color: #ffffff;
     line-height: 1.2;
   }
   .ex-desc {
@@ -334,6 +358,7 @@
 <body>
 
 <div id="flash-overlay"></div>
+<div id="dim-overlay" onclick="wakeScreen()"></div>
 
 <header>
   <span class="logo">Intervalo</span>
@@ -437,6 +462,7 @@
 <div class="status-bubble" id="statusBubble">Intervalo! Hora de se mover.</div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function() {
 // ─── TIMER ───────────────────────────────────────────────────────────
 const TOTAL = 45 * 60; // 45 minutes in seconds
 let remaining = TOTAL;
@@ -444,6 +470,7 @@ let running = false;
 let timerInterval = null;
 
 const circumference = 2 * Math.PI * 80; // 502.65...
+let isDimmed = false; // declared early — used in updateDisplay
 const ringProgress = document.getElementById('ringProgress');
 ringProgress.style.strokeDasharray = circumference;
 
@@ -469,6 +496,9 @@ function updateDisplay() {
   const dotY = ORBIT_CY + ORBIT_R * Math.sin(angle);
   orbitDot.setAttribute('cx', dotX);
   orbitDot.setAttribute('cy', dotY);
+
+  // wake screen 3 min before the end
+  if (remaining <= 180 && isDimmed) wakeScreen();
 
   if (remaining <= 300) {
     ringProgress.classList.add('urgent');
@@ -514,6 +544,11 @@ function resetTimer() {
 // ─── SCREEN FLASH ────────────────────────────────────────────────────
 function triggerAlert() {
   showBubble('Intervalo! Hora de se mover.');
+
+  // flip timer ring: amber bg, black text
+  const ring = document.querySelector('.timer-ring');
+  ring.classList.add('alert-flip');
+
   // Attempt to wake screen via NoSleep-style trick
   const vid = document.createElement('video');
   vid.setAttribute('playsinline', '');
@@ -636,6 +671,57 @@ function showBubble(msg) {
 
 // init
 updateDisplay();
+
+// ─── WAKE LOCK ───────────────────────────────────────────────────────
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && (!wakeLock || wakeLock.released)) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
+requestWakeLock();
+
+// ─── DIM OVERLAY ─────────────────────────────────────────────────────
+const IDLE_DIM_MS = 4 * 60 * 1000; // 4 min
+const WAKE_BEFORE_MS = 3 * 60;     // wake at remaining <= 180s
+
+const dimOverlay = document.getElementById('dim-overlay');
+let dimTimer = null;
+
+function dimScreen() {
+  isDimmed = true;
+  dimOverlay.classList.add('active');
+}
+
+function wakeScreen() {
+  isDimmed = false;
+  dimOverlay.classList.remove('active');
+  resetDimTimer();
+}
+
+function resetDimTimer() {
+  clearTimeout(dimTimer);
+  dimTimer = setTimeout(dimScreen, IDLE_DIM_MS);
+}
+
+// any interaction wakes + resets timer
+['touchstart', 'touchmove', 'click', 'pointerdown'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (isDimmed) wakeScreen();
+    else resetDimTimer();
+  }, { passive: true });
+});
+
+resetDimTimer();
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
