@@ -715,21 +715,25 @@ function wakeScreen() {
   isDimmed = false;
   dimOverlay.classList.remove('active');
   document.querySelector('.timer-section').classList.remove('dimmed-peek');
-  resetDimTimer();
-}
-
-function resetDimTimer() {
   clearTimeout(dimTimer);
   dimTimer = setTimeout(dimScreen, IDLE_DIM_MS);
 }
 
+function resetDimTimer() {
+  if (!isDimmed) {
+    clearTimeout(dimTimer);
+    dimTimer = setTimeout(dimScreen, IDLE_DIM_MS);
+  }
+}
+
 // any interaction wakes + resets timer
-['touchstart', 'touchmove', 'click', 'pointerdown'].forEach(evt => {
-  document.addEventListener(evt, () => {
-    if (isDimmed) wakeScreen();
-    else resetDimTimer();
-  }, { passive: true });
-});
+document.addEventListener('touchstart', handleInteraction, { passive: true });
+document.addEventListener('pointerdown', handleInteraction, { passive: true });
+
+function handleInteraction() {
+  if (isDimmed) wakeScreen();
+  else resetDimTimer();
+}
 
 resetDimTimer();
 }); // end DOMContentLoaded
