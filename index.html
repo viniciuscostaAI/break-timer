@@ -47,29 +47,7 @@
     opacity: 0.6;
   }
 
-  /* DIM OVERLAY */
-  #dim-overlay {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 998;
-    transition: opacity 2s ease;
-  }
-  #dim-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-  }
 
-  /* timer section peeks through overlay when dimmed */
-  .timer-section.dimmed-peek {
-    position: relative;
-    z-index: 999;
-    opacity: 0.15;
-    transition: opacity 2s ease;
-    pointer-events: none;
-  }
 
 
   #flash-overlay {
@@ -367,7 +345,6 @@
 <body>
 
 <div id="flash-overlay"></div>
-<div id="dim-overlay" onclick="wakeScreen()"></div>
 
 <header>
   <span class="logo">Intervalo</span>
@@ -471,15 +448,13 @@
 <div class="status-bubble" id="statusBubble">Intervalo! Hora de se mover.</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
 // ─── TIMER ───────────────────────────────────────────────────────────
 const TOTAL = 45 * 60; // 45 minutes in seconds
 let remaining = TOTAL;
 let running = false;
 let timerInterval = null;
 
-const circumference = 2 * Math.PI * 80; // 502.65...
-let isDimmed = false; // declared early — used in updateDisplay
+const circumference = 2 * Math.PI * 80;
 const ringProgress = document.getElementById('ringProgress');
 ringProgress.style.strokeDasharray = circumference;
 
@@ -505,9 +480,6 @@ function updateDisplay() {
   const dotY = ORBIT_CY + ORBIT_R * Math.sin(angle);
   orbitDot.setAttribute('cx', dotX);
   orbitDot.setAttribute('cy', dotY);
-
-  // wake screen 3 min before the end
-  if (remaining <= 180 && isDimmed) wakeScreen();
 
   if (remaining <= 300) {
     ringProgress.classList.add('urgent');
@@ -698,45 +670,6 @@ document.addEventListener('visibilitychange', () => {
 
 requestWakeLock();
 
-// ─── DIM OVERLAY ─────────────────────────────────────────────────────
-const IDLE_DIM_MS = 4 * 60 * 1000; // 4 min
-const WAKE_BEFORE_MS = 3 * 60;     // wake at remaining <= 180s
-
-const dimOverlay = document.getElementById('dim-overlay');
-let dimTimer = null;
-
-function dimScreen() {
-  isDimmed = true;
-  dimOverlay.classList.add('active');
-  document.querySelector('.timer-section').classList.add('dimmed-peek');
-}
-
-function wakeScreen() {
-  isDimmed = false;
-  dimOverlay.classList.remove('active');
-  document.querySelector('.timer-section').classList.remove('dimmed-peek');
-  clearTimeout(dimTimer);
-  dimTimer = setTimeout(dimScreen, IDLE_DIM_MS);
-}
-
-function resetDimTimer() {
-  if (!isDimmed) {
-    clearTimeout(dimTimer);
-    dimTimer = setTimeout(dimScreen, IDLE_DIM_MS);
-  }
-}
-
-// any interaction wakes + resets timer
-document.addEventListener('touchstart', handleInteraction, { passive: true });
-document.addEventListener('pointerdown', handleInteraction, { passive: true });
-
-function handleInteraction() {
-  if (isDimmed) wakeScreen();
-  else resetDimTimer();
-}
-
-resetDimTimer();
-}); // end DOMContentLoaded
 </script>
 </body>
 </html>
